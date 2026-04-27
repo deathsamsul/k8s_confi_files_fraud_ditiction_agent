@@ -1,0 +1,212 @@
+Separate files needed per service/image
+Each main container/app should have its own folder:
+
+k8s/
+├── postgres/
+├── minio/
+├── mlflow/
+├── fastapi/
+├── dashboard/
+├── airflow/
+├── prometheus/
+└── grafana/
+
+
+
+common-configmap.yaml : Stores non-secret common values used by many apps.
+
+Each app usually needs:
+deployment.yaml
+service.yaml
+configmap.yaml
+secret.yaml
+If it stores data, also needs:
+pvc.yaml
+If browser access needed:
+ingress.yaml
+
+1.PostgreSQL
+Separate because it stores data.
+postgres/
+├── secret.yaml
+├── pvc.yaml
+├── deployment.yaml or statefulset.yaml
+└── service.yaml
+Best method: StatefulSet, not normal Deployment.
+
+2. MinIO
+Separate because it stores MLflow artifacts.
+minio/
+├── secret.yaml
+├── pvc.yaml
+├── deployment.yaml or statefulset.yaml
+└── service.yaml
+
+3. MLflow
+Separate because it is its own server.
+mlflow/
+├── configmap.yaml
+├── secret.yaml
+├── deployment.yaml
+└── service.yaml
+MLflow connects to:
+PostgreSQL → metadata
+MinIO      → artifacts
+
+4. FastAPI
+Separate because it is your prediction API.
+fastapi/
+├── configmap.yaml
+├── secret.yaml
+├── deployment.yaml
+├── service.yaml
+└── ingress.yaml
+FastAPI connects to:
+PostgreSQL
+MLflow
+MinIO if needed
+
+5. Streamlit Dashboard
+Separate because it is another web app.
+dashboard/
+├── configmap.yaml
+├── secret.yaml
+├── deployment.yaml
+├── service.yaml
+└── ingress.yaml
+Dashboard connects to:
+FastAPI
+PostgreSQL
+
+6. Airflow
+Separate because it has multiple containers.
+airflow/
+├── secret.yaml
+├── configmap.yaml
+├── scheduler-deployment.yaml
+├── api-server-deployment.yaml
+├── dag-processor-deployment.yaml
+├── worker-deployment.yaml optional
+└── service.yaml
+For beginner setup use:
+scheduler
+api-server
+dag-processor
+For CeleryExecutor also need:
+worker
+redis
+
+------------------------------------
+Best project structure
+k8s/
+├── namespace.yaml
+│
+├── postgres/
+│   ├── secret.yaml
+│   ├── pvc.yaml
+│   ├── statefulset.yaml
+│   └── service.yaml
+│
+├── minio/
+│   ├── secret.yaml
+│   ├── pvc.yaml
+│   ├── statefulset.yaml
+│   └── service.yaml
+│
+├── mlflow/
+│   ├── configmap.yaml
+│   ├── secret.yaml
+│   ├── deployment.yaml
+│   └── service.yaml
+│
+├── fastapi/
+│   ├── configmap.yaml
+│   ├── secret.yaml
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── ingress.yaml
+│
+├── dashboard/
+│   ├── configmap.yaml
+│   ├── secret.yaml
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   └── ingress.yaml
+│
+├── airflow/
+│   ├── configmap.yaml
+│   ├── secret.yaml
+│   ├── scheduler-deployment.yaml
+│   ├── api-server-deployment.yaml
+│   ├── dag-processor-deployment.yaml
+│   └── service.yaml
+│
+├── prometheus/
+│   ├── configmap.yaml
+│   ├── deployment.yaml
+│   └── service.yaml
+│
+└── grafana/
+    ├── secret.yaml
+    ├── pvc.yaml
+    ├── deployment.yaml
+    └── service.yaml
+
+
+---------------------------------------------
+Step 1: Create namespace
+kubectl apply -f k8s/namespace.yaml
+Step 2: Deploy database first
+kubectl apply -f k8s/postgres/
+Check:
+kubectl get pods -n fraud-detection
+kubectl get svc -n fraud-detection
+Step 3: Deploy MinIO
+kubectl apply -f k8s/minio/
+Step 4: Deploy MLflow
+kubectl apply -f k8s/mlflow/
+MLflow needs PostgreSQL + MinIO ready first.
+Step 5: Deploy FastAPI
+kubectl apply -f k8s/fastapi/
+FastAPI needs MLflow + PostgreSQL.
+Step 6: Deploy Dashboard
+kubectl apply -f k8s/dashboard/
+Dashboard needs FastAPI/PostgreSQL.
+Step 7: Deploy Airflow
+kubectl apply -f k8s/airflow/
+Airflow needs PostgreSQL and access to your ML code.
+Step 8: Deploy monitoring
+kubectl apply -f k8s/prometheus/
+kubectl apply -f k8s/grafana/
+
+------------------------------------------------------------------
+Correct deployment order
+1. namespace
+2. secrets/configmaps
+3. postgres
+4. minio
+5. mlflow
+6. fastapi
+7. dashboard
+8. airflow
+9. prometheus
+10. grafana
+11. ingress
+-------------------------------
+
+7. Simple rule
+Use this rule:
+One application/image = one Deployment + one Service
+Stateful app = StatefulSet + PVC + Service
+Browser access = Ingress
+Sensitive values = Secret
+Normal config = ConfigMap
+For your project:
+PostgreSQL → StatefulSet
+MinIO      → StatefulSet
+MLflow     → Deployment
+FastAPI    → Deployment
+Dashboard  → Deployment
+Airflow    → multiple Deployments
+Prometheus → Deployment or Helm
+Grafana    → Deployment + PVC
