@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-scripts
+  namespace: database
+data:
+  01-create-users.sql: |
+    CREATE DATABASE test_datasets_db;
+    CREATE DATABASE training_datasets_db;
+    CREATE DATABASE new_datasets_db;
+
+    CREATE USER retraining_test_user WITH PASSWORD 'strong_test_password';
+    CREATE USER retraining_training_user WITH PASSWORD 'strong_training_password';
+    CREATE USER retraining_newdata_user WITH PASSWORD 'strong_newdata_password';
+
+    GRANT CONNECT ON DATABASE test_datasets_db TO retraining_test_user;
+    GRANT CONNECT ON DATABASE training_datasets_db TO retraining_training_user;
+    GRANT CONNECT ON DATABASE new_datasets_db TO retraining_newdata_user;
+
+    \connect test_datasets_db;
+    GRANT USAGE, CREATE ON SCHEMA public TO retraining_test_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO retraining_test_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO retraining_test_user;
+
+    \connect training_datasets_db;
+    GRANT USAGE, CREATE ON SCHEMA public TO retraining_training_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO retraining_training_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO retraining_training_user;
+
+    \connect new_datasets_db;
+    GRANT USAGE, CREATE ON SCHEMA public TO retraining_newdata_user;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO retraining_newdata_user;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public
+    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO retraining_newdata_user;

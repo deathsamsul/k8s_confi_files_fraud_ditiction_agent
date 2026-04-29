@@ -1,0 +1,35 @@
+App name: fastapi
+Label: app: fastapi
+Service name: fastapi-service
+1.Deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi
+  template:
+    metadata:
+      labels:
+        app: fastapi
+    spec:
+      containers:
+        - name: fastapi
+          image: your-fastapi-image
+          ports:
+            - containerPort: 8000
+
+2.Service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi-service
+spec:
+  selector:
+    app: fastapi
+  ports:
+    - port: 8000
+      targetPort: 8000
