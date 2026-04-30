@@ -1,0 +1,139 @@
+apiVersion: batch/v1
+kind: Job       # Kubernetes Job resource to run a one-time initialization task
+metadata:
+  name: postgres-init-job   # name of the job
+  namespace: database       # namespace must match the one defined in namespace.yaml
+spec:        # job specification
+  template:   # pod template specification
+    spec:      # pod specification
+      restartPolicy: OnFailure   # restart the pod only if it fails
+      containers:
+        - name: postgres-init      # name of the container
+          image: postgres:17    # use the official PostgreSQL image, version 17
+          env:
+            - name: PGPASSWORD         # set the password for psql commands, value is taken from the secret defined in secret.yaml
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-admin-secret  # name of the secret, must match the one defined in secret.yaml
+                  key: password  
+          command: ["bash", "-c"]  # bash command to execute initialization script,-c allows  multiple commands in sequence
+          args:     # the actual initialization script, which waits for PostgreSQL to be ready, creates databases and users, and grants permissions
+            - |
+              set -e 
+              echo "Waiting for PostgreSQL..."
+              until pg_isready -h postgres-cluster-rw -p 5432 -U postgres_admin; do
+                sleep 2
+              done
+
+              echo "Creating databases and users..."
+              psql -h postgres-cluster-rw -U postgres_admin -d postgres <<'SQL'
+              SELECT 'CREATE DATABASE appdata'
+              WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'appdata')\gexec
+
+              SELECT 'CREATE DATABASE mlflowdb'
+              WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mlflowdb')\gexec
+
+              SELECT 'CREATE DATABASE airflow_db'
+              WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow_db')\gexec
+
+              DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'training_user') THEN
+                  CREATE USER training_user WITH PASSWORD 'train123';
+                END IF;
+
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'prediction_user') THEN
+                  CREATE USER prediction_user WITH PASSWORD 'predict123';
+                END IF;
+
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'metrics') THEN
+                  CREATE USER metrics WITH PASSWORD 'metrics123';
+                END IF;
+
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'mlflow') THEN
+                  CREATE USER mlflow WITH PASSWORD 'mlflow1';
+                END IF;
+
+                IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'airflow') THEN
+                  CREATE USER airflow WITH PASSWORD 'airflowl123';
+                END IF;
+              END
+              $$;
+
+              GRANT CONNECT ON DATABASE appdata TO training_user;
+              GRANT CONNECT ON DATABASE appdata TO prediction_user;
+              GRANT CONNECT ON DATABASE appdata TO metrics;
+
+              GRANT ALL PRIVILEGES ON DATABASE mlflowdb TO mlflow;
+              GRANT ALL PRIVILEGES ON DATABASE airflow_db TO airflow;
+              SQL
+
+              echo "Creating appdata tables..."
+              psql -h postgres-cluster-rw -U postgres_admin -d appdata <<'SQL'
+              CREATE EXTENSION IF NOT EXISTS pgcrypto;
+              CREATE EXTENSION IF NOT EXISTS vector;
+
+              CREATE TABLE IF NOT EXISTS fraud_training_data (
+                merchant TEXT,
+                category TEXT,
+                amt NUMERIC(12,2),
+                gender TEXT,
+                city TEXT,
+                state TEXT,
+                zip TEXT,
+                lat DOUBLE PRECISION,
+                long DOUBLE PRECISION,
+                city_pop BIGINT,
+                job TEXT,
+                unix_time BIGINT,
+                merch_lat DOUBLE PRECISION,
+                merch_long DOUBLE PRECISION,
+                trans_date_trans_time TIMESTAMP,
+                dob DATE,
+                actual_label INTEGER CHECK (actual_label IN (0,1))
+              );
+
+              CREATE TABLE IF NOT EXISTS transactions_predictions (
+                transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fraud_probability DOUBLE PRECISION,
+                prediction INTEGER CHECK (prediction IN (0,1)),
+                actual_label INTEGER CHECK (actual_label IN (0,1)),
+                merchant TEXT,
+                category TEXT,
+                amt NUMERIC(12,2),
+                gender TEXT,
+                city TEXT,
+                state TEXT,
+                zip TEXT,
+                lat DOUBLE PRECISION,
+                long DOUBLE PRECISION,
+                city_pop BIGINT,
+                job TEXT,
+                unix_time BIGINT,
+                merch_lat DOUBLE PRECISION,
+                merch_long DOUBLE PRECISION,
+                trans_date_trans_time TIMESTAMP,
+                dob DATE
+              );
+
+              GRANT USAGE ON SCHEMA public TO training_user;
+              GRANT SELECT, INSERT, UPDATE ON fraud_training_data TO training_user;
+
+              GRANT USAGE ON SCHEMA public TO prediction_user;
+              GRANT SELECT, INSERT, UPDATE ON transactions_predictions TO prediction_user;
+
+              GRANT USAGE, CREATE ON SCHEMA public TO metrics;
+              SQL
+
+              echo "Granting mlflow schema permissions..."
+              psql -h postgres-cluster-rw -U postgres_admin -d mlflowdb <<'SQL'
+              GRANT USAGE, CREATE ON SCHEMA public TO mlflow;
+              SQL
+
+              echo "Granting airflow schema permissions..."
+              psql -h postgres-cluster-rw -U postgres_admin -d airflow_db <<'SQL'
+              GRANT USAGE, CREATE ON SCHEMA public TO airflow;
+              SQL
+
+              echo "PostgreSQL initialization completed."

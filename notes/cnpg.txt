@@ -1,0 +1,37 @@
+Without CloudNativePG:
+  You manage StatefulSet, PVC, probes, securityContext, failover, backup
+
+With CloudNativePG:
+  You define Cluster YAML
+  Operator manages PostgreSQL pods, storage, failover, security defaults
+
+CloudNativePG manages StatefulSet, PVC, failover, probes, and DB pods for you. It uses a Cluster custom resource
+Your Dockerfile is for CloudNativePG, so you should not use normal StatefulSet YAML.
+With CloudNativePG you use:
+
+kind: Cluster
+not:
+kind: StatefulSet
+
+ex;-
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster
+  namespace: database
+spec:
+  instances: 1
+
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+
+  storage:
+    size: 10Gi
+    storageClass: standard
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"

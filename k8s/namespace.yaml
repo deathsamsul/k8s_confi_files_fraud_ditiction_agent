@@ -1,6 +1,4 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: fraud-detection
-  labels:
-    app: fraud-detection
+  name: database # name of the namespace, must match the one used in statefulset.yaml, service.yaml, secret.yaml, and pvc.yaml

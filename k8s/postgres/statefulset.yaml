@@ -1,42 +1,51 @@
 apiVersion: apps/v1
-kind: StatefulSet   
+kind: StatefulSet
 metadata:
-  name: postgres # name of the statefulset
-  namespace: database # namespace must match the one defined in namespace.yaml
+  name: postgres
+  namespace: database
 spec:
-  serviceName: postgres # must match the name of the service defined in service.yaml
+  serviceName: postgres-service
   replicas: 1
   selector:
     matchLabels:
-      app: postgres  # this label must match the label in template.metadata.labels
+      app: postgres
   template:
     metadata:
       labels:
-        app: postgres  # this label must match the selector above
+        app: postgres
     spec:
       containers:
-        - name: postgres    # container name
-          image: postgres:16  # use the official PostgreSQL image, version 16
+        - name: postgres
+          image: postgres:16
           ports:
             - containerPort: 5432
-
           env:
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: postgres-admin-secret   # this refer to the secret defined in secret.yaml
+                  name: postgres-admin-secret
                   key: username
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-admin-secret   # this refer to the secret defined in secret.yaml
+                  name: postgres-admin-secret
                   key: password
-  
           volumeMounts:
-            - name: postgres-init-scripts   # this refer to the volume defined below
-              mountPath: /docker-entrypoint-initdb.d/   # this is the directory where PostgreSQL looks for initialization scripts
-
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+            - name: postgres-init-scripts
+              mountPath: /docker-entrypoint-initdb.d/
       volumes:
-        - name: postgres-init-scripts  # this refer to the volumeMount defined above
+        - name: postgres-init-scripts
           configMap:
-            name: postgres-init-scripts   # this refer to the configmap defined in configmap.yaml
+            name: postgres-init-scripts
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: standard
+        resources:
+          requests:
+            storage: 10Gi

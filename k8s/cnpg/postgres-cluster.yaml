@@ -1,0 +1,21 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres-cluster
+  namespace: database
+spec:
+  instances: 1
+
+  imageName: deathsamsul/cnpg-postgres-pgvector:17.5
+
+  superuserSecret:
+    name: postgres-admin-secret
+
+  storage:
+    size: 10Gi
+    storageClass: standard
+
+  bootstrap:
+    initdb:
+      database: postgres
+      owner: postgres_admin
