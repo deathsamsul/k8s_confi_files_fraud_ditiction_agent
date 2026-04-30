@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: StatefulSet   
+metadata:
+  name: postgres # name of the statefulset
+  namespace: database # namespace must match the one defined in namespace.yaml
+spec:
+  serviceName: postgres # must match the name of the service defined in service.yaml
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres  # this label must match the label in template.metadata.labels
+  template:
+    metadata:
+      labels:
+        app: postgres  # this label must match the selector above
+    spec:
+      containers:
+        - name: postgres    # container name
+          image: postgres:16  # use the official PostgreSQL image, version 16
+          ports:
+            - containerPort: 5432
+
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-admin-secret   # this refer to the secret defined in secret.yaml
+                  key: username
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-admin-secret   # this refer to the secret defined in secret.yaml
+                  key: password
+  
+          volumeMounts:
+            - name: postgres-init-scripts   # this refer to the volume defined below
+              mountPath: /docker-entrypoint-initdb.d/   # this is the directory where PostgreSQL looks for initialization scripts
+
+      volumes:
+        - name: postgres-init-scripts  # this refer to the volumeMount defined above
+          configMap:
+            name: postgres-init-scripts   # this refer to the configmap defined in configmap.yaml

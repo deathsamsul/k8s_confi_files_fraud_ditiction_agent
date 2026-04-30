@@ -10,3 +10,30 @@ RUN apt-get update && \
 USER 26
 --------------------------
 In CloudNativePG, create DB/users/passwords with Kubernetes manifests and SQL bootstrap.
+
+``````````````````````configmap -----------note
+# datname is the actual column name defined internally
+CREATE DATABASE IF NOT EXISTS appdata;  # not support this 
+SELECT 'CREATE DATABASE appdata' # this part return string not exicutaion 
+# only return that text if the database does not already exist.
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'appdata')\gexec 
+# Only return that string if database does NOT exist
+SELECT 'CREATE DATABASE appdata'
+WHERE NOT EXISTS (...)
+\gexec                 # This is a psql command, not SQL. Take the result of SELECT and execute it as SQL
+if (database "appdata" does NOT exist) {
+    run "CREATE DATABASE appdata"
+}
+pg_database is a PostgreSQL system catalog table. It stores all database names.
+# procedural block This is a PL/pgSQL block (PostgreSQL procedural language).
+Because plain SQL does NOT support IF
+👉 It allows:
+IF
+loops
+variables
+logic
+DO $$
+BEGIN
+  ...
+END
+$$;

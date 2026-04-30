@@ -1,36 +1,108 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: postgres-init-scripts
-  namespace: database
+  name: postgres-init-scripts   # must match the name used in statefulset.yaml
+  namespace: database         # namespace must match the one defined in namespace.yaml
 data:
-  01-create-users.sql: |
-    CREATE DATABASE test_datasets_db;
-    CREATE DATABASE training_datasets_db;
-    CREATE DATABASE new_datasets_db;
+  01-init-databases-users-tables.sql: |
+    SELECT 'CREATE DATABASE appdata'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'appdata')\gexec   
 
-    CREATE USER retraining_test_user WITH PASSWORD 'strong_test_password';
-    CREATE USER retraining_training_user WITH PASSWORD 'strong_training_password';
-    CREATE USER retraining_newdata_user WITH PASSWORD 'strong_newdata_password';
+    SELECT 'CREATE DATABASE mlflowdb'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'mlflowdb')\gexec
 
-    GRANT CONNECT ON DATABASE test_datasets_db TO retraining_test_user;
-    GRANT CONNECT ON DATABASE training_datasets_db TO retraining_training_user;
-    GRANT CONNECT ON DATABASE new_datasets_db TO retraining_newdata_user;
+    SELECT 'CREATE DATABASE airflow_db'
+    WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow_db')\gexec
 
-    \connect test_datasets_db;
-    GRANT USAGE, CREATE ON SCHEMA public TO retraining_test_user;
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO retraining_test_user;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO retraining_test_user;
+    DO $$
+    BEGIN
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'training_user') THEN
+        CREATE USER training_user WITH PASSWORD 'train123';
+      END IF;
 
-    \connect training_datasets_db;
-    GRANT USAGE, CREATE ON SCHEMA public TO retraining_training_user;
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO retraining_training_user;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO retraining_training_user;
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'prediction_user') THEN
+        CREATE USER prediction_user WITH PASSWORD 'predict123';
+      END IF;
 
-    \connect new_datasets_db;
-    GRANT USAGE, CREATE ON SCHEMA public TO retraining_newdata_user;
-    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO retraining_newdata_user;
-    ALTER DEFAULT PRIVILEGES IN SCHEMA public
-    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO retraining_newdata_user;
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'metrics') THEN
+        CREATE USER metrics WITH PASSWORD 'metrics123';
+      END IF;
+
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'mlflow') THEN
+        CREATE USER mlflow WITH PASSWORD 'mlflow1';
+      END IF;
+
+      IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'airflow') THEN
+        CREATE USER airflow WITH PASSWORD 'airflowl123';
+      END IF;
+    END
+    $$;
+
+    GRANT CONNECT ON DATABASE appdata TO training_user;
+    GRANT CONNECT ON DATABASE appdata TO prediction_user;
+    GRANT CONNECT ON DATABASE appdata TO metrics;
+
+    GRANT ALL PRIVILEGES ON DATABASE mlflowdb TO mlflow;
+    GRANT ALL PRIVILEGES ON DATABASE airflow_db TO airflow;
+
+    \connect appdata;
+
+    CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+    CREATE TABLE IF NOT EXISTS fraud_training_data (
+      merchant TEXT,
+      category TEXT,
+      amt NUMERIC(12,2),
+      gender TEXT,
+      city TEXT,
+      state TEXT,
+      zip TEXT,
+      lat DOUBLE PRECISION,
+      long DOUBLE PRECISION,
+      city_pop BIGINT,
+      job TEXT,
+      unix_time BIGINT,
+      merch_lat DOUBLE PRECISION,
+      merch_long DOUBLE PRECISION,
+      trans_date_trans_time TIMESTAMP,
+      dob DATE,
+      actual_label INTEGER CHECK (actual_label IN (0,1))
+    );
+
+    CREATE TABLE IF NOT EXISTS transactions_predictions (
+      transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      fraud_probability DOUBLE PRECISION,
+      prediction INTEGER CHECK (prediction IN (0,1)),
+      actual_label INTEGER CHECK (actual_label IN (0,1)),
+      merchant TEXT,
+      category TEXT,
+      amt NUMERIC(12,2),
+      gender TEXT,
+      city TEXT,
+      state TEXT,
+      zip TEXT,
+      lat DOUBLE PRECISION,
+      long DOUBLE PRECISION,
+      city_pop BIGINT,
+      job TEXT,
+      unix_time BIGINT,
+      merch_lat DOUBLE PRECISION,
+      merch_long DOUBLE PRECISION,
+      trans_date_trans_time TIMESTAMP,
+      dob DATE
+    );
+
+    GRANT USAGE ON SCHEMA public TO training_user;
+    GRANT SELECT, INSERT, UPDATE ON fraud_training_data TO training_user;
+
+    GRANT USAGE ON SCHEMA public TO prediction_user;
+    GRANT SELECT, INSERT, UPDATE ON transactions_predictions TO prediction_user;
+
+    GRANT USAGE, CREATE ON SCHEMA public TO metrics;
+
+    \connect mlflowdb;
+    GRANT USAGE, CREATE ON SCHEMA public TO mlflow;
+
+    \connect airflow_db;
+    GRANT USAGE, CREATE ON SCHEMA public TO airflow;
