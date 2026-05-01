@@ -1,43 +1,50 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fraud-detection-fastapi
+  name: fraud-api  # name of the deployment, must match the one used in service.yaml
+  namespace: fraud-api
   labels:
-    app: fraud-detection
+    app: fraud-api
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: fraud-detection
+      app: fraud-api
   template:
     metadata:
       labels:
-        app: fraud-detection
+        app: fraud-api  # must match the selector labels used in service.yaml spec.selector.app=fraud-api
     spec:
       containers:
-        - name: fastapi
-          image: fraud-detection-fastapi:latest
+        - name: fraud-api 
+          image: deathsamsul/fraud-api:1.0.0
+          imagePullPolicy: IfNotPresent  # kubernetes always pull the latest image from the registry when container start
           ports:
-            - containerPort: 80
-          env:
-            - name: APP_ENV
-              value: "production"
-          readinessProbe:
+            - containerPort: 8000
+
+          envFrom:          # load environment variables from configmap and secret
+            - configMapRef:
+                name: fraud-api-config   # name of the configmap, must match the one used in configmap.yaml
+            - secretRef:
+                name: fraud-api-secret   # name of the secret, must match the one used in secret.yaml
+
+          readinessProbe:   # check the application is ready to receive traffic
+            httpGet:          # Kubernetes will check using an HTTP request 
+              path: /health   # http://pod-ip:8000/health
+              port: 8000
+            initialDelaySeconds: 10      # wait 10 sec after container starts before the first check
+            periodSeconds: 10        # After pod starts, wait 30 seconds, then check /health every 20 seconds. If app stops responding, restart the container.
+          livenessProbe:    # is my app still alive? and restart if it crashes
             httpGet:
               path: /health
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /health
-              port: 80
-            initialDelaySeconds: 15
+              port: 8000
+            initialDelaySeconds: 30   #After pod starts, wait 30 seconds, then check /health every 20 seconds. If app stops responding, restart
             periodSeconds: 20
-          resources:
+
+          resources:    # Controls CPU and memory for the container.
             requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "250m"     # 1000m = 1 CPU core, so 250m = 0.25 CPU cores
+              memory: "512Mi" # 512Mi = 512 megabytes of memory Kubernetes reserves 512 MiB RAM for your app.
+            limits:   # maximum resources the container can use. If it tries to use more, it will be throttled or killed.
+              cpu: "1"
+              memory: "1Gi"  

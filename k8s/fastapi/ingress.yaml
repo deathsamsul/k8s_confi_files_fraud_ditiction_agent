@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fraud-api-ingress   
+  namespace: fraud-api
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target:         # rewrite the URL path to the root of the service  
+spec:
+  ingressClassName: nginx # specify the ingress controller to use, must match the one used in deployment.yaml
+  rules:
+    - host: fraud-api.yourdomain.com   # replace with your actual domain
+      http:
+        paths:
+          - path: /            # match all paths starting with / and route to the service
+            pathType: Prefix               # match all paths starting with / and route to the service
+            backend:
+              service:
+                name: fraud-api-service  # name of the service, must match the one used in service.yaml
+                port:
+                  number: 80            # port of the service, must match the one used in service.yaml
