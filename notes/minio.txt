@@ -1,0 +1,5 @@
+You cannot open this in browser directly because it's ClusterIP.
+To access UI:
+kubectl port-forward svc/minio -n mlops 9001:9001
+Then:
+http://localhost:9001

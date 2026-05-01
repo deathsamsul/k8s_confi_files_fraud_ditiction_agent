@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio
+  namespace: mlops
+spec:
+  serviceName: minio   # name of the headless service, must match the one used in service.yaml Used for stable DNS (minio-0.minio)
+  replicas: 1
+  selector:      # kubernetes use to manage pods, must match the labels in template.metadata.labels
+    matchLabels:  # this label must match the selector.matchLabels in statefulset.yaml and service.yaml important for stable DNS (minio-0.minio)
+      app: minio
+  template:    # kKubernetes uses this to track pods
+    metadata:
+      labels:
+        app: minio  # this label must match the selector.matchLabels in statefulset.yaml and service.yaml
+    spec:
+      containers:
+        - name: minio
+          image: minio/minio:latest
+          args:          # Startup Command (args) 
+            - server      # Start MinIO server
+            - /data       # /data → where MinIO stores objects
+            - --console-address   # Expose MinIO Console on port 9001
+            - ":9001"
+          ports:
+            - containerPort: 9000        # 9000 → S3 API (used by MLflow, apps)
+              name: api
+            - containerPort: 9001    # 9001 → MinIO web UI (console)
+              name: console
+          env:
+            - name: MINIO_ROOT_USER  
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_USER
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: minio-secret
+                  key: MINIO_ROOT_PASSWORD
+          volumeMounts:
+            - name: minio-storage
+              mountPath: /data
+      volumes:
+        - name: minio-storage
+          persistentVolumeClaim:
+            claimName: minio-pvc

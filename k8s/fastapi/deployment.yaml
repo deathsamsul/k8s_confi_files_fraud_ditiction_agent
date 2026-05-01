@@ -18,7 +18,7 @@ spec:
       containers:
         - name: fraud-api 
           image: deathsamsul/fraud-api:1.0.0
-          imagePullPolicy: IfNotPresent  # kubernetes always pull the latest image from the registry when container start
+          imagePullPolicy: IfNotPresent  # Pull image only if it is not already on the node.
           ports:
             - containerPort: 8000
 

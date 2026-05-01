@@ -1,0 +1,58 @@
+
+PREDICTION_DATABASE_URL=postgresql+psycopg2://prediction_user:predict123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
+METRICS_DB_URL=postgresql+psycopg2://metrics:metrics123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
+TRAINING_DATA_STORE_URL=postgresql+psycopg2://training_user:train123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
+DATABASE_URL=postgresql://mlflow:mlflow1@postgres-cluster-rw.database.svc.cluster.local:5432/mlflowdb
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
+AIRFLOW__DATABASE__SQL_ALCHEMY_CONN_ASYNC=postgresql+asyncpg://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
+
+
+
+
+This is Kubernetes internal DNS.
+Structure:
+http://<service-name>.<namespace>.svc.cluster.local:<port>
+http://minio.minio.svc.cluster.local:9000
+http:// → protocol
+minio → service name
+minio → namespace
+svc → Kubernetes service DNS type
+cluster.local → default cluster domain
+9000 → port
+
+<driver>://<username>:<password>@<host>:<port>/<database>
+postgresql+psycopg2://prediction_user:predict123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
+postgresql+psycopg2 → DB type + driver
+prediction_user → username
+predict123 → password ⚠️ (sensitive)
+@ → separator
+postgres-cluster-rw.database.svc.cluster.local → host
+5432 → PostgreSQL port
+appdata → database name
+postgres-cluster-rw.database.svc.cluster.local
+│                │        │     │
+│                │        │     └ cluster domain
+│                │        └ service type
+│                └ namespace
+└ service name
+
+postgres-cluster-rw = Service name
+database            = Namespace name
+svc                 = Kubernetes service DNS
+cluster.local       = Kubernetes internal cluster domain
+postgres-cluster = CNPG cluster metadata.name
+-rw              = read-write service
+
+What is “full DNS”?
+When services are in different namespaces, short names fail.
+Then you must use full address:
+http://<service>.<namespace>.svc.cluster.local:<port>
+Example
+If:
+Service	Namespace
+API	fraud-api
+MinIO	minio
+MLflow	mlflow
+Then:
+MLFLOW_TRACKING_URI: "http://mlflow.mlflow.svc.cluster.local:5000"
+MLFLOW_S3_ENDPOINT_URL: "http://minio.minio.svc.cluster.local:9000"

@@ -1,12 +1,4 @@
 
-PREDICTION_DATABASE_URL=postgresql+psycopg2://prediction_user:predict123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
-METRICS_DB_URL=postgresql+psycopg2://metrics:metrics123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
-TRAINING_DATA_STORE_URL=postgresql+psycopg2://training_user:train123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
-DATABASE_URL=postgresql://mlflow:mlflow1@postgres-cluster-rw.database.svc.cluster.local:5432/mlflowdb
-AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
-AIRFLOW__DATABASE__SQL_ALCHEMY_CONN_ASYNC=postgresql+asyncpg://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
-
-
 Separate files needed per service/image
 Each main container/app should have its own folder:
 
