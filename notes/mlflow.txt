@@ -1,0 +1,18 @@
+kubectl apply -f mlflow-secret.yaml
+kubectl apply -f mlflow-configmap.yaml
+kubectl apply -f mlflow-deployment.yaml
+kubectl apply -f mlflow-service.yaml
+
+Port-forward to test:
+kubectl port-forward svc/mlflow 5000:5000
+Then open:
+http://localhost:5000
+Also make sure your mlflow_requirements.txt includes:
+mlflow
+psycopg2-binary
+boto3
+pymysql
+For PostgreSQL, the important one is:
+psycopg2-binary
+For MinIO/S3 artifacts, the important one is:
+boto3
