@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monitoring-dashboard
+  namespace: ml-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monitoring-dashboard
+  template:
+    metadata:
+      labels:
+        app: monitoring-dashboard
+    spec:
+      containers:
+        - name: monitoring-dashboard
+          image: deathsamsul/custom_dashboard:1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8501
+          env:
+            - name: MONITORING_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: monitoring-dashboard-config
+                  key: MONITORING_API_URL
+
+            - name: TRAINING_DATA_STORE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: monitoring-dashboard-secret
+                  key: TRAINING_DATA_STORE_URL
+
+            - name: PREDICTION_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: monitoring-dashboard-secret
+                  key: PREDICTION_DATABASE_URL
+

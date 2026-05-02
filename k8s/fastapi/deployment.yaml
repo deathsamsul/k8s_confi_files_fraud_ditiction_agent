@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: fraud-api 
-          image: deathsamsul/fraud-api:1.0.0
+          image: deathsamsul/fraud-api:latest
           imagePullPolicy: IfNotPresent  # Pull image only if it is not already on the node.
           ports:
             - containerPort: 8000

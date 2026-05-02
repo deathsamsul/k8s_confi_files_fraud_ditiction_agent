@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-dashboard-config
+  namespace: ml-monitoring
+data:
+  MONITORING_API_URL: "http://fraud-api-service.fraud-api.svc.cluster.local"

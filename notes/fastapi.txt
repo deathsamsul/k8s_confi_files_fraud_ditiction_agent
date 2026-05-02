@@ -1,0 +1,57 @@
+MONITORING_API_URL: "http://api.backend.svc.cluster.local:8000"
+api                  = FastAPI Service name
+backend              = FastAPI namespace
+svc.cluster.local    = Kubernetes internal DNS
+8000                 = FastAPI service port
+
+Your API service:
+
+name: fraud-api-service
+namespace: fraud-api
+port: 80
+🔗 URL to use (from another namespace)
+http://fraud-api-service.fraud-api.svc.cluster.local
+
+or shorter (recommended):
+
+http://fraud-api-service.fraud-api
+📦 Breakdown
+fraud-api-service.fraud-api.svc.cluster.local
+│                 │          │     │
+│                 │          │     └ cluster domain
+│                 │          └ service DNS
+│                 └ namespace
+└ service name
+🧠 Rule
+Scenario	URL
+Same namespace	http://fraud-api-service
+Different namespace	http://fraud-api-service.<namespace>
+Fully explicit	http://fraud-api-service.<namespace>.svc.cluster.local
+
+
+
+🔑 Why no port needed?
+Because your Service defines a default port:
+ports:
+  - port: 80        # 👈 THIS is what other services use
+    targetPort: 8000
+🧠 How it works
+When another service calls:
+http://fraud-api-service.fraud-api
+Kubernetes automatically assumes:
+http://fraud-api-service.fraud-api:80
+👉 Because HTTP default port = 80
+🔄 What happens internally
+Request → Service (port 80) → Pod (port 8000)
+Flow:
+Caller hits:
+fraud-api-service:80
+Kubernetes forwards to:
+container:8000
+That’s what this does:
+port: 80
+targetPort: 8000
+
+Service port (80) = public door
+Container port (8000) = internal room
+You knock on the door (80), Kubernetes takes you inside (8000).
