@@ -4,7 +4,7 @@ metadata:
   name: minio
   namespace: mlops
 spec:
-  clusterIP: None
+  type: ClusterIP
   selector:
     app: minio
   ports:

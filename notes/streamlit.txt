@@ -1,0 +1,6 @@
+k8s/streamlit/
+  namespace.yaml
+  configmap.yaml
+  secret.yaml
+  deployment.yaml
+  service.yaml

@@ -1,7 +1,12 @@
-kubectl apply -f mlflow-secret.yaml
-kubectl apply -f mlflow-configmap.yaml
-kubectl apply -f mlflow-deployment.yaml
-kubectl apply -f mlflow-service.yaml
+kubectl apply -f namespace.yaml
+kubectl apply -f secret.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+
+kubectl get pods -n mlflow
+kubectl logs -n mlflow deploy/mlflow
+kubectl port-forward -n mlflow svc/mlflow 5000:5000
 
 Port-forward to test:
 kubectl port-forward svc/mlflow 5000:5000
@@ -16,3 +21,18 @@ For PostgreSQL, the important one is:
 psycopg2-binary
 For MinIO/S3 artifacts, the important one is:
 boto3
+
+
+--default-artifact-root s3://mlflow
+- name: MLFLOW_S3_ENDPOINT_URL
+  value: http://minio:9000
+- name: AWS_ACCESS_KEY_ID
+  valueFrom:
+    secretKeyRef:
+      name: minio-secret
+      key: MINIO_ROOT_USER
+- name: AWS_SECRET_ACCESS_KEY
+  valueFrom:
+    secretKeyRef:
+      name: minio-secret
+      key: MINIO_ROOT_PASSWORD
