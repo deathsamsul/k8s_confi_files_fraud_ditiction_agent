@@ -1,0 +1,30 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: initial-model
+  namespace: fraud-mlops
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: initial-model
+          image: fraud-mlops-jobs:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "app.startup_jobs.initial_model"]
+          env:
+            - name: TEMP_DIR
+              value: "/tmp/temp_data"
+            - name: TRAINING_DATA_STORE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fraud-db-secret
+                  key: TRAINING_DATA_STORE_URL
+            - name: MLFLOW_TRACKING_URI
+              value: "http://mlflow-service:5000"
+          volumeMounts:
+            - name: temp-data
+              mountPath: /tmp/temp_data
+      volumes:
+        - name: temp-data
+          emptyDir: {}

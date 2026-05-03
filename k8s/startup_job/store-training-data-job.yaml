@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: store-training-data
+  namespace: fraud-mlops
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: store-training-data
+          image: fraud-mlops-jobs:latest
+          imagePullPolicy: IfNotPresent
+          command: ["python", "-m", "app.startup_jobs.store_train_data"]
+          env:
+            - name: DATA_DIR
+              value: "/opt/datasets"
+            - name: TEMP_DIR
+              value: "/tmp/temp_data"
+            - name: TRAINING_DATA_STORE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fraud-db-secret
+                  key: TRAINING_DATA_STORE_URL
+          volumeMounts:
+            - name: dataset
+              mountPath: /opt/datasets
+              readOnly: true
+            - name: temp-data
+              mountPath: /tmp/temp_data
+      volumes:
+        - name: dataset
+          persistentVolumeClaim:
+            claimName: fraud-dataset-pvc
+        - name: temp-data
+          emptyDir: {}
