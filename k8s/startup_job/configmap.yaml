@@ -2,7 +2,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: fraud-mlops-config
+  namespace: fraud-mlops
 data:
-  DATA_DIR: "/opt/datasets"
+  MLFLOW_TRACKING_URI: "http://mlflow.mlflow.svc.cluster.local:5000"
   TEMP_DIR: "/tmp/temp_data"
-  MLFLOW_TRACKING_URI: "http://mlflow-service:5000"
+  DATA_DIR: "/opt/datasets"
