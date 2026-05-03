@@ -1,32 +1,34 @@
 apiVersion: batch/v1
-kind: Job       # Kubernetes Job resource to run a one-time initialization task
+kind: Job
 metadata:
-  name: postgres-init-job   # name of the job
-  namespace: database       # namespace must match the one defined in namespace.yaml
-spec:        # job specification
-  template:   # pod template specification
-    spec:      # pod specification
-      restartPolicy: OnFailure   # restart the pod only if it fails
+  name: postgres-init-job
+  namespace: database
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
       containers:
-        - name: postgres-init      # name of the container
-          image: postgres:17    # use the official PostgreSQL image, version 17
+        - name: postgres-init
+          image: postgres:17
           env:
-            - name: PGPASSWORD         # set the password for psql commands, value is taken from the secret defined in secret.yaml
+            - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-admin-secret  # name of the secret, must match the one defined in secret.yaml
-                  key: password  
-          command: ["bash", "-c"]  # bash command to execute initialization script,-c allows  multiple commands in sequence
-          args:     # the actual initialization script, which waits for PostgreSQL to be ready, creates databases and users, and grants permissions
+                  name: postgres-admin-secret
+                  key: password
+          command: ["bash", "-c"]
+          args:
             - |
-              set -e 
+              set -e
+
               echo "Waiting for PostgreSQL..."
-              until pg_isready -h postgres-cluster-rw -p 5432 -U postgres_admin; do
+              until pg_isready -h postgres-cluster-rw -p 5432 -U postgres; do
                 sleep 2
               done
 
               echo "Creating databases and users..."
-              psql -h postgres-cluster-rw -U postgres_admin -d postgres <<'SQL'
+              psql -h postgres-cluster-rw -U postgres -d postgres <<'SQL'
               SELECT 'CREATE DATABASE appdata'
               WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'appdata')\gexec
 
@@ -36,7 +38,7 @@ spec:        # job specification
               SELECT 'CREATE DATABASE airflow_db'
               WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'airflow_db')\gexec
 
-              DO $$
+              DO $do$
               BEGIN
                 IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'training_user') THEN
                   CREATE USER training_user WITH PASSWORD 'train123';
@@ -58,7 +60,7 @@ spec:        # job specification
                   CREATE USER airflow WITH PASSWORD 'airflowl123';
                 END IF;
               END
-              $$;
+              $do$;
 
               GRANT CONNECT ON DATABASE appdata TO training_user;
               GRANT CONNECT ON DATABASE appdata TO prediction_user;
@@ -69,7 +71,7 @@ spec:        # job specification
               SQL
 
               echo "Creating appdata tables..."
-              psql -h postgres-cluster-rw -U postgres_admin -d appdata <<'SQL'
+              psql -h postgres-cluster-rw -U postgres -d appdata <<'SQL'
               CREATE EXTENSION IF NOT EXISTS pgcrypto;
               CREATE EXTENSION IF NOT EXISTS vector;
 
@@ -127,12 +129,12 @@ spec:        # job specification
               SQL
 
               echo "Granting mlflow schema permissions..."
-              psql -h postgres-cluster-rw -U postgres_admin -d mlflowdb <<'SQL'
+              psql -h postgres-cluster-rw -U postgres -d mlflowdb <<'SQL'
               GRANT USAGE, CREATE ON SCHEMA public TO mlflow;
               SQL
 
               echo "Granting airflow schema permissions..."
-              psql -h postgres-cluster-rw -U postgres_admin -d airflow_db <<'SQL'
+              psql -h postgres-cluster-rw -U postgres -d airflow_db <<'SQL'
               GRANT USAGE, CREATE ON SCHEMA public TO airflow;
               SQL
 
