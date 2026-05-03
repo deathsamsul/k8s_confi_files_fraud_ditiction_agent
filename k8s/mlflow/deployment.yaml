@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: mlflow
-          image: deathsamsul/mlflow:1.0
+          image: deathsamsul/mlflow:1.1
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5000
