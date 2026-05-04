@@ -1,11 +1,28 @@
 MLFLOW_TRACKING_URI = "http://mlflow.mlflow.svc.cluster.local:5000"
 
-
+cd ~/projects/fraud-detection-k8s/k8s/mlflow
+# 1. Namespaces
+# 2. MLflow config + secret
+# 3. MLflow deployment + service
+# 4. Ingress, if you have it
+Apply process:
 kubectl apply -f namespace.yaml
 kubectl apply -f secret.yaml
 kubectl apply -f configmap.yaml
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
+
+Then check:
+kubectl get all -n mlflow
+kubectl describe pod -n mlflow -l app=mlflow
+kubectl logs -n mlflow deploy/mlflow
+
+Test locally:
+kubectl port-forward -n mlflow svc/mlflow 5000:5000
+
+Open:
+http://localhost:5000
+
 
 kubectl get pods -n mlflow
 kubectl logs -n mlflow deploy/mlflow
@@ -15,6 +32,12 @@ Port-forward to test:
 kubectl port-forward svc/mlflow 5000:5000
 Then open:
 http://localhost:5000
+
+delete old broken pod
+kubectl delete deployment mlflow -n mlflow
+check 
+kubectl get pods -n mlflow
+
 Also make sure your mlflow_requirements.txt includes:
 mlflow
 psycopg2-binary

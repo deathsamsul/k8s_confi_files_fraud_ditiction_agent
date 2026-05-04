@@ -1,6 +1,46 @@
+For local laptop testing with port-forward, keep localhost:
+kubectl port-forward -n database svc/postgres-cluster-rw 5432:5432
+
+# apply order 
+cd /home/sam/projects/fraud-detection-k8s/k8s/cnpg
+1. Namespace (always first)
+kubectl apply -f namespace.yaml
+2. CloudNativePG Operator (if not already installed)
+kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.23/releases/cnpg-1.23.3.yaml
+3. Secret (needed by cluster)
+kubectl apply -f secret.yaml
+4. PostgreSQL Cluster
+kubectl apply -f postgres-cluster.yaml
+Wait for PostgreSQL:
+kubectl get cluster -n database
+kubectl get pods -n database -w
+5. Init Job (after DB is ready)
+When the cluster is ready, apply the init job:
+kubectl apply -f postgres-init-job.yaml
+kubectl logs -n database job/postgres-init-job   # check job logs
+If everything is correct
+kubectl apply -f .
+
+kubectl apply -f namespace.yaml
+kubectl apply -f postgres-cluster.yaml
+
+Order:
+Namespace
+Operator
+Secret
+Cluster
+Init Job
+
+
+
+Pending → Kubernetes scheduling pod
+Init:0/1 → init container starting
+PodInitializing → preparing environment
+Running (0/1) → container starting up
+Running (1/1) → ✅ fully ready
+
 Without CloudNativePG:
   You manage StatefulSet, PVC, probes, securityContext, failover, backup
-
 With CloudNativePG:
   You define Cluster YAML
   Operator manages PostgreSQL pods, storage, failover, security defaults

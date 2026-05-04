@@ -1,3 +1,37 @@
+cd ~/projects/fraud-detection-k8s/k8s/minio
+kubectl apply -f namespace.yaml
+kubectl apply -f secret.yaml
+kubectl apply -f pvc.yaml
+kubectl apply -f service.yaml
+kubectl apply -f statefulset.yaml
+
+Wait for MinIO:
+kubectl get pods -n mlops          # minio-0   1/1     Running
+When pod is Running, apply bucket job:
+kubectl apply -f bucket-job.yaml
+Check:
+kubectl logs job/minio-create-bucket -n mlops
+kubectl get pvc -n mlops
+kubectl get svc -n mlops
+
+Check via MinIO Console 
+kubectl port-forward svc/minio -n mlops 9001:9001
+Open:
+http://localhost:9001
+Login
+Username: minioadmin
+Password: minioadmin123
+
+
+
+For MLflow:
+MLFLOW_S3_ENDPOINT_URL: http://minio.mlops.svc.cluster.local:9000
+or if MLflow is also in mlops:
+MLFLOW_S3_ENDPOINT_URL: http://minio:9000
+MLflow artifact config should now be:
+--default-artifact-root s3://mlflow
+
+
 You cannot open this in browser directly because it's ClusterIP.
 To access UI:
 kubectl port-forward svc/minio -n mlops 9001:9001

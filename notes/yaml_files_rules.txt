@@ -1,3 +1,15 @@
+delete cluster
+kubectl delete all --all --all-namespaces
+Check if cluster is running
+kubectl cluster-info
+
+
+
+
+
+
+
+
 App name: fastapi
 Label: app: fastapi
 Service name: fastapi-service
