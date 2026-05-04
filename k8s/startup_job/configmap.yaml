@@ -4,6 +4,7 @@ metadata:
   name: fraud-mlops-config
   namespace: fraud-mlops
 data:
+  MLFLOW_S3_ENDPOINT_URL: "http://minio.minio.svc.cluster.local:9000"
   MLFLOW_TRACKING_URI: "http://mlflow.mlflow.svc.cluster.local:5000"
   TEMP_DIR: "/tmp/temp_data"
   DATA_DIR: "/opt/datasets"

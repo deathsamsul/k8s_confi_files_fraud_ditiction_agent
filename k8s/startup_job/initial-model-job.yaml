@@ -1,16 +1,17 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: initial-model
+  name: initial-model  
   namespace: fraud-mlops
 spec:
-  backoffLimit: 1
+  backoffLimit: 1        # Controls how many times Kubernetes retries the Job if it fails. After that → marked as failed permanently
+
   template:
     spec:
-      restartPolicy: Never
+      restartPolicy: Never  # If the container stops (success or failure) Kubernetes will NOT restart it inside the same Pod
       containers:
         - name: initial-model
-          image: fraud-mlops-jobs:latest
+          image: deathsamsul/startup_job:1.1
           imagePullPolicy: IfNotPresent
           command: ["python", "-m", "app.startup_jobs.initial_model"]
           envFrom:

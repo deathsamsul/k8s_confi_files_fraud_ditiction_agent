@@ -4,6 +4,7 @@ metadata:
   name: fraud-dataset-pvc
   namespace: fraud-mlops
 spec:
+  storageClassName: standard  
   accessModes:
     - ReadWriteOnce
   resources:
