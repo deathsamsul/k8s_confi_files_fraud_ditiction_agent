@@ -43,10 +43,10 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: mlflow-secret
-                  key: MINIO_ACCESS_KEY
+                  key: AWS_ACCESS_KEY_ID
 
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
                   name: mlflow-secret
-                  key: MINIO_SECRET_KEY
+                  key: AWS_SECRET_ACCESS_KEY

@@ -4,7 +4,7 @@ metadata:
   name: mlflow-config
   namespace: mlflow
 data:
-  BACKEND_STORE_URI: postgresql+psycopg2://mlflow:mlflow1@postgres-cluster-rw.database.svc.cluster.local:5432/mlflowdb
-  ARTIFACT_ROOT: s3://mlflow
-  MLFLOW_S3_ENDPOINT_URL: http://minio.mlops.svc.cluster.local:9000
+  BACKEND_STORE_URI: "postgresql+psycopg2://mlflow:mlflow1@postgres-cluster-rw.database.svc.cluster.local:5432/mlflowdb"
+  ARTIFACT_ROOT: "s3://mlflow"
+  MLFLOW_S3_ENDPOINT_URL: "http://minio.mlops.svc.cluster.local:9000"
 

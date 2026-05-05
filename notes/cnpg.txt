@@ -31,7 +31,11 @@ Secret
 Cluster
 Init Job
 
-
+connect with postgres :
+kubectl exec -it postgres-cluster-1 -n database -- \
+psql -h 127.0.0.1 -U postgres -d postgres
+database check :
+SELECT datname FROM pg_database WHERE datistemplate = false;
 
 Pending → Kubernetes scheduling pod
 Init:0/1 → init container starting
