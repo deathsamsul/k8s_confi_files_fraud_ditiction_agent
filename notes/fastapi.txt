@@ -1,3 +1,23 @@
+cd ~/projects/fraud-detection-k8s/k8s/fastapi
+kubectl apply -f namespace.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+check :
+kubectl get pods -n fraud-api
+Swagger UI with port-forward:
+
+kubectl port-forward svc/fraud-api-service -n fraud-api 8000:80
+
+Then open browser:
+http://localhost:8000/docs
+Also test health:
+http://localhost:8000/health
+
+
+
+
 MONITORING_API_URL: "http://api.backend.svc.cluster.local:8000"
 api                  = FastAPI Service name
 backend              = FastAPI namespace

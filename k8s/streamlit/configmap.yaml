@@ -5,3 +5,5 @@ metadata:
   namespace: ml-monitoring
 data:
   MONITORING_API_URL: "http://fraud-api-service.fraud-api.svc.cluster.local"
+  MLFLOW_S3_ENDPOINT_URL: "http://minio.mlops.svc.cluster.local:9000"
+  MLFLOW_TRACKING_URI: "http://mlflow.mlflow.svc.cluster.local:5000"

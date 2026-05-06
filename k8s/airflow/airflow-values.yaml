@@ -1,0 +1,95 @@
+airflowVersion: "3.2.0"
+
+fernetKey: "fdqL58pCm5TTrIoUPdFOyql6padBRt6YnHumhD5yevk="
+webserverSecretKey: "d915d16dafb6ebce99e3be98de8b47b4b60b031ebe2d61699b5a63db704f4a29"
+
+executor: CeleryExecutor
+
+defaultAirflowRepository: deathsamsul/airflow-worker
+defaultAirflowTag: 3.2.0
+defaultAirflowPullPolicy: IfNotPresent
+
+airflowHome: /opt/airflow
+
+postgresql:
+  enabled: false
+
+redis:
+  enabled: true
+  persistence:
+    enabled: false
+
+dagProcessor:
+  enabled: true
+  replicas: 1
+
+apiServer:
+  replicas: 1
+
+scheduler:
+  replicas: 1
+
+workers:
+  celery:
+    replicas: 1
+
+triggerer:
+  enabled: true
+  replicas: 1
+
+flower:
+  enabled: false
+
+env:
+  - name: AIRFLOW_HOME
+    value: /opt/airflow
+
+  - name: AIRFLOW__CORE__DAGS_FOLDER
+    value: /opt/airflow/app/airflow_dags
+
+  - name: AIRFLOW__CORE__LOAD_EXAMPLES
+    value: "False"
+
+  - name: PYTHONPATH
+    value: /opt/airflow:/opt/airflow/app
+
+  - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+    value: postgresql+psycopg2://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
+
+  - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN_ASYNC
+    value: postgresql+asyncpg://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
+
+  - name: AWS_ACCESS_KEY_ID
+    value: minioadmin
+
+  - name: AWS_SECRET_ACCESS_KEY
+    value: minioadmin123
+
+  - name: TRAINING_DATA_STORE_URL
+    value: postgresql+psycopg2://training_user:train123@postgres-cluster-rw.database.svc.cluster.local:5432/appdata
+
+  - name: MLFLOW_S3_ENDPOINT_URL
+    value: http://minio.mlops.svc.cluster.local:9000
+
+  - name: MLFLOW_TRACKING_URI
+    value: http://mlflow.mlflow.svc.cluster.local:5000
+
+dags:
+  persistence:
+    enabled: false
+  gitSync:
+    enabled: false
+
+logs:
+  persistence:
+    enabled: false
+
+volumes:
+  - name: app-code
+    hostPath:
+      path: /home/sam/projects/fraud_detection_mlops/app
+      type: Directory
+
+volumeMounts:
+  - name: app-code
+    mountPath: /opt/airflow/app

@@ -1,6 +1,9 @@
 1.CloudNativePG
+cd ~/projects/fraud-detection-k8s/k8s/cnpg
 kubectl apply -f namespace.yaml
 kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.23/releases/cnpg-1.23.3.yaml
+wait ;
+kubectl get pods -n cnpg-system
 kubectl apply -f secret.yaml
 kubectl apply -f postgres-cluster.yaml
 Wait for PostgreSQL:
@@ -18,6 +21,10 @@ kubectl apply -f pvc.yaml
 kubectl apply -f service.yaml
 kubectl apply -f statefulset.yaml
 kubectl apply -f bucket-job.yaml
+check pod :
+kubectl logs -n mlops statefulset/minio
+job logs :
+kubectl logs -n mlops job/minio-create-bucket
 
 3.mlflow
 cd ~/projects/fraud-detection-k8s/k8s/mlflow
@@ -26,6 +33,10 @@ kubectl apply -f secret.yaml
 kubectl apply -f configmap.yaml
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
+check pods;
+kubectl get pods -n mlflow
+check deployment :
+kubectl get deployment -n mlflow
 
 4. startup-job
 cd ~/projects/fraud-detection-k8s/k8s/startup_job 
@@ -58,3 +69,23 @@ kubectl get jobs -n fraud-mlops
 kubectl apply -f initial-model-job.yaml
 kubectl get jobs -n fraud-mlops
 kubectl logs job/initial-model -n fraud-mlops
+
+5. api service
+cd ~/projects/fraud-detection-k8s/k8s/fastapi
+kubectl apply -f namespace.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+check :
+kubectl get pods -n fraud-api
+Swagger UI with port-forward:
+
+kubectl port-forward svc/fraud-api-service -n fraud-api 8000:80
+
+Then open browser:
+http://localhost:8000/docs
+Also test health:
+http://localhost:8000/health
+
+6.airflow

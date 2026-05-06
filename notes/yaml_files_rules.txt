@@ -1,3 +1,12 @@
+Quick summary
+kubectl get svc → services status
+kubectl get pods → app health
+kubectl get deployments → rollout status
+kubectl get all → everything in one shot
+systemctl status kubelet → VM-level service
+
+
+
 delete cluster
 kubectl delete all --all --all-namespaces
 Check if cluster is running

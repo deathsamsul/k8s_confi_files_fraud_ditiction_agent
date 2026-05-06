@@ -120,7 +120,7 @@ spec:
               );
 
               GRANT USAGE ON SCHEMA public TO training_user;
-              GRANT SELECT, INSERT, UPDATE ON fraud_training_data TO training_user;
+              GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE ON fraud_training_data TO training_user;
 
               GRANT USAGE ON SCHEMA public TO prediction_user;
               GRANT SELECT, INSERT, UPDATE ON transactions_predictions TO prediction_user;
