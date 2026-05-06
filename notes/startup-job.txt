@@ -20,3 +20,16 @@ PVC                    → holds CSV for first job
 dataset-copy-pod       → lets you kubectl cp CSV into PVC
 store-training-data    → loads CSV into PostgreSQL
 initial-model          → trains/registers model from PostgreSQL
+
+
+TRUNCATE permissions :
+kubectl delete job store-training-data -n fraud-mlops
+kubectl apply -f store-training-data-job.yaml
+kubectl exec -it -n database postgres-cluster-1 -- psql -U postgres -d appdata
+Inside PostgreSQL terminal:
+GRANT TRUNCATE ON TABLE public.fraud_training_data TO training_user;
+
+Or full permissions:
+GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE
+ON TABLE public.fraud_training_data
+TO training_user;

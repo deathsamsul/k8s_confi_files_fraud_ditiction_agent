@@ -89,3 +89,11 @@ Also test health:
 http://localhost:8000/health
 
 6.airflow
+cd ~/projects/fraud-detection-k8s
+kubectl config current-context    # docker-desktop
+helm repo add apache-airflow https://airflow.apache.org
+helm repo update
+helm upgrade --install airflow apache-airflow/airflow \
+  --namespace airflow \
+  --create-namespace \
+  -f k8s/airflow/airflow-values.yaml

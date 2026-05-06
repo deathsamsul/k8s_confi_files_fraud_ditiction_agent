@@ -84,12 +84,16 @@ logs:
   persistence:
     enabled: false
 
-volumes:
-  - name: app-code
-    hostPath:
-      path: /home/sam/projects/fraud_detection_mlops/app
-      type: Directory
-
-volumeMounts:
-  - name: app-code
-    mountPath: /opt/airflow/app
+dags:
+  mountPath: /opt/airflow/app
+  persistence:
+    enabled: false
+  gitSync:
+    enabled: true
+    repo: https://github.com/deathsamsul/Autonomous_Fraud_Detection_Agent.git
+    branch: main
+    ref: main
+    rev: HEAD
+    depth: 1
+    subPath: app
+    period: 10s
