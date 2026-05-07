@@ -32,3 +32,6 @@ kubectl get pods -n airflow -w
 Then verify DAG path:
 kubectl exec -it -n airflow deploy/airflow-dag-processor -- \
 ls -la /opt/airflow/repo/app/airflow_dags
+cheack git synk foldear :
+kubectl exec -it -n airflow deploy/airflow-scheduler -- \
+ls -la /opt/airflow/app

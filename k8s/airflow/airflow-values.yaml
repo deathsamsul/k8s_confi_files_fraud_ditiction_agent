@@ -64,14 +64,14 @@ flower:
 env:
 
   - name: AIRFLOW__CORE__DAGS_FOLDER
-    value: /opt/airflow/repo/app/airflow_dags
+    value: /opt/airflow/app/repo/app/airflow_dags
 
   - name: AIRFLOW__CORE__LOAD_EXAMPLES
     value: "False"
 
   - name: PYTHONPATH
-    value: /opt/airflow/repo:/opt/airflow
-
+    value: /opt/airflow/app/repo:/opt/airflow
+    
   - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN_ASYNC
     value: postgresql+asyncpg://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
 
@@ -91,7 +91,7 @@ env:
     value: http://mlflow.mlflow.svc.cluster.local:5000
 
 dags:
-  mountPath: /opt/airflow
+  mountPath: /opt/airflow/app
   persistence:
     enabled: false
   gitSync:
