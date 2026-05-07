@@ -97,3 +97,6 @@ helm upgrade --install airflow apache-airflow/airflow \
   --namespace airflow \
   --create-namespace \
   -f k8s/airflow/airflow-values.yaml
+check :
+helm list -n airflow
+kubectl get pods -n airflow

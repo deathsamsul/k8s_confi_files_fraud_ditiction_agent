@@ -4,6 +4,7 @@ metadata:
   name: initial-model  
   namespace: fraud-mlops
 spec:
+  ttlSecondsAfterFinished: 360  # Automatically clean up the Job after 6m of completion (success or failure)
   backoffLimit: 1        # Controls how many times Kubernetes retries the Job if it fails. After that → marked as failed permanently
 
   template:

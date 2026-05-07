@@ -4,6 +4,7 @@ metadata:
   name: minio-create-bucket
   namespace: mlops
 spec:
+  ttlSecondsAfterFinished: 60  # Automatically clean up the Job after 1m of completion (success or failure)
   template:
     spec:
       restartPolicy: OnFailure    # Restart the job if it fails

@@ -4,6 +4,7 @@ metadata:
   name: store-training-data
   namespace: fraud-mlops
 spec:
+  ttlSecondsAfterFinished: 360  # Automatically clean up the Job after 1 hour of completion (success or failure)
   backoffLimit: 1     # Retry the Job only once if it fails
   template:
     spec:
