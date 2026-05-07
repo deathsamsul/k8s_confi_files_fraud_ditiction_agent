@@ -36,6 +36,21 @@ scheduler:
 workers:
   celery:
     replicas: 1
+    extraEnv:
+      - name: AIRFLOW__CELERY__WORKER_CONCURRENCY
+        value: "1"
+
+    logGroomerSidecar:
+      enabled: false
+
+# workers:
+#   celery:
+#     replicas: 1
+#     extraEnv:
+#       - name: AIRFLOW__CELERY__WORKER_CONCURRENCY
+#         value: "1"  # Adjust based on your needs and resources
+#     logGroomer:
+#       enabled: false
 
 triggerer:
   enabled: false
@@ -44,16 +59,18 @@ triggerer:
 flower:
   enabled: false
 
+
+
 env:
 
   - name: AIRFLOW__CORE__DAGS_FOLDER
-    value: /opt/airflow/app/airflow_dags
+    value: /opt/airflow/repo/app/airflow_dags
 
   - name: AIRFLOW__CORE__LOAD_EXAMPLES
     value: "False"
 
   - name: PYTHONPATH
-    value: /opt/airflow:/opt/airflow/app
+    value: /opt/airflow/repo:/opt/airflow
 
   - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN_ASYNC
     value: postgresql+asyncpg://airflow:airflowl123@postgres-cluster-rw.database.svc.cluster.local:5432/airflow_db
@@ -74,7 +91,7 @@ env:
     value: http://mlflow.mlflow.svc.cluster.local:5000
 
 dags:
-  mountPath: /opt/airflow/app
+  mountPath: /opt/airflow
   persistence:
     enabled: false
   gitSync:
@@ -84,7 +101,6 @@ dags:
     ref: main
     rev: HEAD
     depth: 1
-    subPath: app
     period: 10s
 
 data:

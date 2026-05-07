@@ -1,0 +1,34 @@
+cd ~/projects/fraud-detection-k8s
+kubectl config current-context    # docker-desktop
+helm repo add apache-airflow https://airflow.apache.org
+helm repo update
+helm upgrade --install airflow apache-airflow/airflow \
+  --namespace airflow \
+  --create-namespace \
+  -f k8s/airflow/airflow-values.yaml
+check :
+helm list -n airflow
+kubectl get pods -n airflow
+
+kubectl port-forward svc/airflow-api-server 8080:8080 -n airflow
+Open:
+http://localhost:8080
+Login:
+admin / admin
+
+old hlem chart uninstall :
+ helm uninstall airflow -n airflow
+Then remove old leftover pods/jobs/PVCs:
+kubectl delete pod --all -n airflow
+kubectl delete job --all -n airflow
+kubectl delete pvc --all -n airflow
+then apply :
+helm upgrade --install airflow apache-airflow/airflow \
+  --namespace airflow \
+  --create-namespace \
+  -f k8s/airflow/airflow-values.yaml
+Watch pods:
+kubectl get pods -n airflow -w
+Then verify DAG path:
+kubectl exec -it -n airflow deploy/airflow-dag-processor -- \
+ls -la /opt/airflow/repo/app/airflow_dags
