@@ -35,3 +35,10 @@ ls -la /opt/airflow/repo/app/airflow_dags
 cheack git synk foldear :
 kubectl exec -it -n airflow deploy/airflow-scheduler -- \
 ls -la /opt/airflow/app
+dag file check :
+kubectl exec -it -n airflow deploy/airflow-dag-processor -c git-sync -- \
+ls -la /git/repo/app/airflow_dags
+
+
+fernetKey: "fdqL58pCm5TTrIoUPdFOyql6padBRt6YnHumhD5yevk="
+webserverSecretKey: "d915d16dafb6ebce99e3be98de8b47b4b60b031ebe2d61699b5a63db704f4a29"

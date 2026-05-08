@@ -1,12 +1,11 @@
 airflowVersion: "3.2.0"
 
-fernetKey: "fdqL58pCm5TTrIoUPdFOyql6padBRt6YnHumhD5yevk="
-webserverSecretKey: "d915d16dafb6ebce99e3be98de8b47b4b60b031ebe2d61699b5a63db704f4a29"
-
+fernetKey: 
+webserverSecretKey: 
 executor: CeleryExecutor
 
 defaultAirflowRepository: deathsamsul/airflow-worker
-defaultAirflowTag: "3.2.0"
+defaultAirflowTag: "3.2.1"
 defaultAirflowPullPolicy: IfNotPresent
 
 airflowHome: /opt/airflow
