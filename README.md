@@ -1,39 +1,51 @@
-# Fraud Detection — Kubernetes Deployment
+# Fraud Detection Platform — Kubernetes Infrastructure
 
-Production deployment of the fraud detection MLOps pipeline on Kubernetes, using CloudNativePG, MinIO, MLflow, Apache Airflow, and FastAPI.
+Kubernetes deployment manifests for the fraud detection MLOps platform. This repository covers the infrastructure layer only — provisioning, service configuration, and bootstrap jobs.
 
-This repo handles the infrastructure side. The application code lives in [fraud-detection-mlops](../fraud_detection_mlops).
+Application and model training code lives in [`fraud_detection_mlops`](../fraud_detection_mlops).
 
 ---
 
-## What's running in the cluster
+## Architecture
 
-| Service | Namespace | Purpose |
+```
+CloudNativePG → PostgreSQL init → MinIO → MLflow → Bootstrap jobs → FastAPI → Airflow
+```
+
+| Component | Namespace | Responsibility |
 |---|---|---|
-| PostgreSQL (CloudNativePG) | `database` | MLflow metadata backend + prediction logs |
-| MinIO | `mlops` | S3-compatible artifact storage for MLflow |
+| CloudNativePG | `database` | PostgreSQL cluster for MLflow metadata and prediction logging |
+| MinIO | `mlops` | S3-compatible artifact storage |
 | MLflow | `mlflow` | Experiment tracking and model registry |
-| Airflow | `airflow` | Retraining DAG orchestration |
+| Airflow | `airflow` | Scheduled retraining workflows |
 | FastAPI | `fraud-api` | Real-time fraud prediction API |
+
+Namespaces are isolated by service boundary to simplify lifecycle management and reduce cross-service coupling.
+
+---
+
+## Design Decisions
+
+**Why CloudNativePG instead of a plain PostgreSQL pod**
+A standalone PostgreSQL pod loses data if it restarts without careful PVC management. CloudNativePG handles failover, backup, and connection pooling natively inside Kubernetes — less operational overhead for a stateful workload that everything else depends on.
+
+**Why MinIO instead of cloud object storage**
+MinIO exposes an S3-compatible API, so MLflow connects to it with the same boto3 configuration it would use for AWS S3. Swapping to real S3 in production requires changing one environment variable, not rewriting anything.
+
+**Model promotion via aliases**
+Models are registered in MLflow and promoted using aliases (`Production`, `Staging`) rather than version pinning. The inference service loads whichever model holds the `Production` alias at startup — so retraining and promotion never require a FastAPI redeployment.
+
+**Dataset bootstrap via temporary pod**
+Kubernetes Jobs cannot accept external file input directly. The solution is a short-lived pod with a shared PVC — copy the dataset in via `kubectl cp`, then delete the pod. The data persists on the PVC and is available to subsequent training jobs.
 
 ---
 
 ## Prerequisites
 
-- Kubernetes cluster (tested on Docker Desktop and kind)
-- `kubectl` configured and pointing at your cluster
+- Kubernetes cluster — tested on Docker Desktop and kind
+- `kubectl` configured against your target cluster
 - `helm` v3+
-- The training dataset at `~/projects/fraud_detection_mlops/datasets/fraud_train_data.csv`
-
----
-
-## Deployment Order
-
-Services have dependencies — deploy in this order.
-
-```
-PostgreSQL → MinIO → MLflow → Startup Jobs → FastAPI → Airflow
-```
+- Training dataset at `~/projects/fraud_detection_mlops/datasets/fraud_train_data.csv`
 
 ---
 
@@ -43,23 +55,21 @@ PostgreSQL → MinIO → MLflow → Startup Jobs → FastAPI → Airflow
 cd k8s/cnpg
 
 kubectl apply -f namespace.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.23/releases/cnpg-1.23.3.yaml
+kubectl apply --server-side -f \
+  https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.23/releases/cnpg-1.23.3.yaml
 
-# Wait for the operator to be ready
+# Wait for the operator pod to be Running
 kubectl get pods -n cnpg-system
 
 kubectl apply -f secret.yaml
 kubectl apply -f postgres-cluster.yaml
-```
 
-Wait for the cluster to come up:
-
-```bash
+# Watch until all cluster pods are Running
 kubectl get cluster -n database
 kubectl get pods -n database -w
 ```
 
-Once all pods show `Running`, apply the init job to create the required databases and users:
+Once the cluster is healthy, run the init job to create databases and users:
 
 ```bash
 kubectl apply -f postgres-init-job.yaml
@@ -79,20 +89,19 @@ kubectl apply -f pvc.yaml
 kubectl apply -f service.yaml
 kubectl apply -f statefulset.yaml
 kubectl apply -f bucket-job.yaml
-```
 
-Check the pod and bucket creation:
-
-```bash
+# Verify
 kubectl logs -n mlops statefulset/minio
 kubectl logs -n mlops job/minio-create-bucket
 ```
 
-The bucket job creates the `mlflow-artifacts` bucket that MLflow will use as its artifact root.
+The bucket job creates `mlflow-artifacts`, which MLflow uses as its artifact root.
 
 ---
 
 ## 3. MLflow
+
+MLflow requires both PostgreSQL and MinIO to be healthy before it starts. Deploy after both are confirmed running.
 
 ```bash
 cd k8s/mlflow
@@ -102,22 +111,16 @@ kubectl apply -f secret.yaml
 kubectl apply -f configmap.yaml
 kubectl apply -f deployment.yaml
 kubectl apply -f service.yaml
-```
 
-Verify:
-
-```bash
 kubectl get pods -n mlflow
 kubectl get deployment -n mlflow
 ```
 
-MLflow is configured to use PostgreSQL as its metadata backend and MinIO as its artifact store — both need to be healthy before this deployment will start correctly.
-
 ---
 
-## 4. Startup Jobs
+## 4. Bootstrap Jobs
 
-This step loads the training dataset into the cluster and trains the initial model.
+One-time jobs that load the training dataset and train the initial model. These do not need to run again unless the PVC is deleted.
 
 ```bash
 cd k8s/startup_job
@@ -128,47 +131,45 @@ kubectl apply -f secret.yaml
 kubectl apply -f pvc.yaml
 ```
 
-### Copy the dataset
-
-Spin up a temporary pod with a shared volume, copy the CSV into it, then delete the pod:
+**Copy the dataset into the cluster:**
 
 ```bash
 kubectl apply -f tem_pod.yaml
 
-# Wait for the pod to be Running
+# Wait for Running
 kubectl get pod dataset-copy-pod -n fraud-mlops
 
-# Copy dataset into the pod
+# Copy dataset
 kubectl cp /home/sam/projects/fraud_detection_mlops/datasets/fraud_train_data.csv \
   fraud-mlops/dataset-copy-pod:/opt/datasets/fraud_train_data.csv \
   -c copy
 
-# Verify the file landed correctly
+# Verify
 kubectl exec -n fraud-mlops dataset-copy-pod -- ls -lh /opt/datasets
 
-# Done — clean up the temp pod
+# Clean up
 kubectl delete pod dataset-copy-pod -n fraud-mlops
 ```
 
-### Store training data
+**Store training data to PVC:**
 
 ```bash
 kubectl apply -f store-training-data-job.yaml
-
-kubectl get jobs -n fraud-mlops        # 1/1 = complete, 0/1 = running or failed
 kubectl logs job/store-training-data -n fraud-mlops
+
+# 1/1 = complete — 0/1 = still running or failed
+kubectl get jobs -n fraud-mlops
 ```
 
-### Train the initial model
+**Train and register the initial model:**
 
 ```bash
 kubectl apply -f initial-model-job.yaml
-
-kubectl get jobs -n fraud-mlops
 kubectl logs job/initial-model -n fraud-mlops
+kubectl get jobs -n fraud-mlops
 ```
 
-This job trains the baseline model and registers it in MLflow under the `Production` alias.
+This registers the baseline model in MLflow under the `Production` alias.
 
 ---
 
@@ -186,7 +187,7 @@ kubectl apply -f service.yaml
 kubectl get pods -n fraud-api
 ```
 
-Test locally with port-forward:
+Test with port-forward:
 
 ```bash
 kubectl port-forward svc/fraud-api-service -n fraud-api 8000:80
@@ -201,12 +202,12 @@ kubectl port-forward svc/fraud-api-service -n fraud-api 8000:80
 
 ## 6. Airflow
 
-Deployed via the official Helm chart with a custom values file.
+Deployed via the official Helm chart with a custom values file that configures connections to PostgreSQL and MinIO.
 
 ```bash
 cd ~/projects/fraud-detection-k8s
 
-kubectl config current-context    # confirm you're on the right cluster
+kubectl config current-context
 
 helm repo add apache-airflow https://airflow.apache.org
 helm repo update
@@ -215,16 +216,10 @@ helm upgrade --install airflow apache-airflow/airflow \
   --namespace airflow \
   --create-namespace \
   -f k8s/airflow/airflow-values.yaml
-```
 
-Check the rollout:
-
-```bash
 helm list -n airflow
 kubectl get pods -n airflow
 ```
-
-The `airflow-values.yaml` configures DAG sync from this repo, Airflow connections to PostgreSQL and MinIO, and the executor type.
 
 ---
 
@@ -270,33 +265,18 @@ k8s/
 
 ---
 
-## Namespaces
-
-| Namespace | Services |
-|---|---|
-| `cnpg-system` | CloudNativePG operator |
-| `database` | PostgreSQL cluster |
-| `mlops` | MinIO |
-| `mlflow` | MLflow tracking server |
-| `fraud-mlops` | Training jobs, dataset storage |
-| `fraud-api` | FastAPI inference service |
-| `airflow` | Airflow scheduler, webserver, workers |
-
----
-
 ## Teardown
 
 ```bash
-kubectl delete namespace fraud-api fraud-mlops mlflow mlops database airflow
-kubectl delete namespace cnpg-system
+kubectl delete namespace fraud-api fraud-mlops mlflow mlops database airflow cnpg-system
 ```
 
-This removes all workloads and PVCs. MLflow runs and model artifacts stored in MinIO will be lost unless you back up the MinIO volume first.
+This removes all workloads and PVCs. Back up the MinIO volume first if you want to keep MLflow runs and registered models.
 
 ---
 
 ## Notes
 
-- All secrets in this repo use placeholder values. Replace them before deploying to any non-local environment.
-- The startup jobs (dataset copy + initial training) are one-time operations. They do not need to re-run unless the PVC is deleted.
-- Airflow retraining DAGs will automatically handle model updates after the initial deployment.
+- Secrets in this repo use placeholder values — replace before deploying outside of a local environment
+- Bootstrap jobs are one-time — they do not re-run unless the PVC is deleted
+- After initial deployment, Airflow handles all subsequent retraining automatically
