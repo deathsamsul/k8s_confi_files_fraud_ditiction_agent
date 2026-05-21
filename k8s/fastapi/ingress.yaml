@@ -18,3 +18,4 @@ spec:
                 name: fraud-api-service  # name of the service, must match the one used in service.yaml
                 port:
                   number: 80            # port of the service, must match the one used in service.yaml
+                  

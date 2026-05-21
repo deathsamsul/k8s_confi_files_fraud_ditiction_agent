@@ -139,3 +139,6 @@ spec:
               SQL
 
               echo "PostgreSQL initialization completed."
+
+
+              
